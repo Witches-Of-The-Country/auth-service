@@ -1,9 +1,9 @@
-package com.dungeoneer.auth_service;
+package com.dungeoneer.auth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.dungeoneer.auth")
 public class AuthServiceApplication {
 
 	public static void main(String[] args) {
