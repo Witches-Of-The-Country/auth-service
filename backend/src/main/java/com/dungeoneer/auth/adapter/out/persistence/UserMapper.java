@@ -21,6 +21,14 @@ public final class UserMapper {
         return entity;
     }
 
+    public static void updateEntity(UserJpaEntity entity, User domain) {
+        entity.setEmail(domain.getEmail());
+        entity.setNickname(domain.getNickname());
+        entity.setBirthdate(domain.getBirthdate());
+        entity.setPasswordHash(domain.getPasswordHash());
+        entity.setRoles(domain.getRoles().stream().map(Enum::name).collect(Collectors.toList()));
+    }
+
     public static User toDomain(UserJpaEntity entity) {
         List<Role> roles = entity.getRoles() != null
                 ? entity.getRoles().stream().map(Role::valueOf).collect(Collectors.toList())
