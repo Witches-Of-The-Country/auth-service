@@ -14,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,7 +40,9 @@ class UserRepositoryTest {
     @DisplayName("Should save a new user entity and retrieve it by email")
     void shouldSaveAndFindUserByEmail() {
         // Arrange
+        UUID generatedId = UUID.randomUUID();
         UserJpaEntity entity = new UserJpaEntity();
+        entity.setId(generatedId);
         entity.setEmail("integration@test.com");
         entity.setNickname("IntegrationTest");
         entity.setBirthdate(LocalDate.of(2000, 1, 1));

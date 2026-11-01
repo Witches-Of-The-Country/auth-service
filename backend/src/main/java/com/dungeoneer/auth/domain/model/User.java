@@ -45,7 +45,12 @@ public class User {
     }
 
     public static User createNew(String email, String nickname, LocalDate birthdate, String passwordHash) {
-        return new User(UUID.randomUUID(), email, nickname, birthdate, passwordHash, List.of(Role.PLAYER));
+        return createNew(email, nickname, birthdate, passwordHash, List.of(Role.PLAYER));
+    }
+
+    public static User createNew(String email, String nickname, LocalDate birthdate, String passwordHash, List<Role> roles) {
+        List<Role> initialRoles = (roles != null && !roles.isEmpty()) ? roles : List.of(Role.PLAYER);
+        return new User(UUID.randomUUID(), email, nickname, birthdate, passwordHash, initialRoles);
     }
 
     public UUID getId() {

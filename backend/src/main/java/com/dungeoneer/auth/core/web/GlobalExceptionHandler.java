@@ -2,6 +2,7 @@ package com.dungeoneer.auth.core.web;
 
 import com.dungeoneer.auth.domain.exception.DuplicateUserException;
 import com.dungeoneer.auth.domain.exception.InvalidCredentialsException;
+import com.dungeoneer.auth.domain.exception.UserNotFoundException;
 import com.dungeoneer.auth.domain.exception.UserValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,6 +18,15 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ProblemDetail handleUserNotFoundException(UserNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Not Found");
+        problem.setType(URI.create("https://dungeoneer.app/errors/not-found"));
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
 
     @ExceptionHandler(DuplicateUserException.class)
     public ProblemDetail handleDuplicateUserException(DuplicateUserException ex) {

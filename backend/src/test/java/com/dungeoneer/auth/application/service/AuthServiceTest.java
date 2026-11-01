@@ -152,4 +152,29 @@ class AuthServiceTest {
 
         assertThrows(InvalidCredentialsException.class, () -> authService.login(command));
     }
+
+    @Test
+    @DisplayName("Should successfully add role to user and return new auth response")
+    void shouldAddRoleToUser() {
+        when(userRepositoryPort.findById(sampleUser.getId())).thenReturn(Optional.of(sampleUser));
+        when(userRepositoryPort.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(tokenProviderPort.generateToken(any(User.class))).thenReturn("new.dm.jwt.token");
+        when(tokenProviderPort.getExpirationSeconds()).thenReturn(86400L);
+
+        AuthResponseDto response = authService.addRole(sampleUser.getId(), Role.DUNGEON_MASTER);
+
+        assertNotNull(response);
+        assertEquals("new.dm.jwt.token", response.accessToken());
+        assertTrue(response.user().roles().contains(Role.DUNGEON_MASTER));
+    }
+
+    @Test
+    @DisplayName("Should throw UserNotFoundException when adding role to non-existent user")
+    void shouldThrowWhenAddingRoleToNonExistentUser() {
+        UUID randomId = UUID.randomUUID();
+        when(userRepositoryPort.findById(randomId)).thenReturn(Optional.empty());
+
+        assertThrows(com.dungeoneer.auth.domain.exception.UserNotFoundException.class, () ->
+                authService.addRole(randomId, Role.DUNGEON_MASTER));
+    }
 }

@@ -77,4 +77,26 @@ class UserTest {
         assertThrows(UserValidationException.class, () ->
                 User.createNew("valid@email.com", "Hero", LocalDate.of(1990, 1, 1), " "));
     }
+
+    @Test
+    @DisplayName("Should create user with multiple roles when provided to createNew")
+    void shouldCreateNewUserWithMultipleRoles() {
+        LocalDate birthdate = LocalDate.of(1992, 8, 24);
+        User user = User.createNew("multi@dnd.com", "DmMaker", birthdate, "hash123", List.of(Role.PLAYER, Role.DUNGEON_MASTER));
+
+        assertEquals(2, user.getRoles().size());
+        assertTrue(user.getRoles().contains(Role.PLAYER));
+        assertTrue(user.getRoles().contains(Role.DUNGEON_MASTER));
+    }
+
+    @Test
+    @DisplayName("Should fallback to Role.PLAYER when roles list is empty or null in createNew")
+    void shouldFallbackToPlayerWhenRolesEmptyOrNull() {
+        LocalDate birthdate = LocalDate.of(1992, 8, 24);
+        User userWithNull = User.createNew("null@dnd.com", "NullRole", birthdate, "hash123", null);
+        User userWithEmpty = User.createNew("empty@dnd.com", "EmptyRole", birthdate, "hash123", List.of());
+
+        assertEquals(List.of(Role.PLAYER), userWithNull.getRoles());
+        assertEquals(List.of(Role.PLAYER), userWithEmpty.getRoles());
+    }
 }
