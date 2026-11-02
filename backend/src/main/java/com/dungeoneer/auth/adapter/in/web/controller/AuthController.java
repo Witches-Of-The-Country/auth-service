@@ -3,6 +3,7 @@ package com.dungeoneer.auth.adapter.in.web.controller;
 import com.dungeoneer.auth.adapter.in.web.dto.AddRoleRequest;
 import com.dungeoneer.auth.adapter.in.web.dto.LoginRequest;
 import com.dungeoneer.auth.adapter.in.web.dto.RegisterRequest;
+import com.dungeoneer.auth.adapter.in.web.dto.UpdateAvatarRequest;
 import com.dungeoneer.auth.application.dto.AuthResponseDto;
 import com.dungeoneer.auth.application.dto.UserProfileDto;
 import com.dungeoneer.auth.application.port.in.GetProfileUseCase;
@@ -11,6 +12,7 @@ import com.dungeoneer.auth.application.port.in.LoginUserUseCase;
 import com.dungeoneer.auth.application.port.in.RegisterUserCommand;
 import com.dungeoneer.auth.application.port.in.RegisterUserUseCase;
 import com.dungeoneer.auth.application.port.in.SelfPromoteUseCase;
+import com.dungeoneer.auth.application.port.in.UpdateAvatarUseCase;
 import com.dungeoneer.auth.application.port.in.UpdateUserRolesUseCase;
 import com.dungeoneer.auth.application.port.out.TokenProviderPort;
 import jakarta.validation.Valid;
@@ -19,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,6 +38,7 @@ public class AuthController {
     private final GetProfileUseCase getProfileUseCase;
     private final UpdateUserRolesUseCase updateUserRolesUseCase;
     private final SelfPromoteUseCase selfPromoteUseCase;
+    private final UpdateAvatarUseCase updateAvatarUseCase;
     private final TokenProviderPort tokenProviderPort;
 
     public AuthController(
@@ -43,6 +47,7 @@ public class AuthController {
             GetProfileUseCase getProfileUseCase,
             UpdateUserRolesUseCase updateUserRolesUseCase,
             SelfPromoteUseCase selfPromoteUseCase,
+            UpdateAvatarUseCase updateAvatarUseCase,
             TokenProviderPort tokenProviderPort
     ) {
         this.registerUserUseCase = registerUserUseCase;
@@ -50,6 +55,7 @@ public class AuthController {
         this.getProfileUseCase = getProfileUseCase;
         this.updateUserRolesUseCase = updateUserRolesUseCase;
         this.selfPromoteUseCase = selfPromoteUseCase;
+        this.updateAvatarUseCase = updateAvatarUseCase;
         this.tokenProviderPort = tokenProviderPort;
     }
 
@@ -115,6 +121,43 @@ public class AuthController {
 
         return tokenProviderPort.validateTokenAndGetUserId(token)
                 .map(selfPromoteUseCase::promoteToDungeonMaster)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PostMapping("/me/roles/toggle-dm")
+    public ResponseEntity<AuthResponseDto> toggleDungeonMasterRole(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        if (authHeader == null || !authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = authHeader.substring(7).trim();
+        while (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            token = token.substring(7).trim();
+        }
+
+        return tokenProviderPort.validateTokenAndGetUserId(token)
+                .map(selfPromoteUseCase::toggleDungeonMasterRole)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PutMapping("/me/avatar")
+    public ResponseEntity<UserProfileDto> updateAvatar(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody UpdateAvatarRequest request
+    ) {
+        if (authHeader == null || !authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = authHeader.substring(7).trim();
+        while (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            token = token.substring(7).trim();
+        }
+
+        return tokenProviderPort.validateTokenAndGetUserId(token)
+                .map(userId -> updateAvatarUseCase.updateAvatar(userId, request.avatarUrl()))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }

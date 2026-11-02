@@ -99,4 +99,41 @@ class UserTest {
         assertEquals(List.of(Role.PLAYER), userWithNull.getRoles());
         assertEquals(List.of(Role.PLAYER), userWithEmpty.getRoles());
     }
+
+    @Test
+    @DisplayName("Should allow removing DUNGEON_MASTER role while preserving PLAYER")
+    void shouldRemoveDungeonMasterRole() {
+        User user = User.createNew("dm@dnd.com", "MasterDungeon", LocalDate.of(1990, 3, 15), "hash", List.of(Role.PLAYER, Role.DUNGEON_MASTER));
+        user.removeRole(Role.DUNGEON_MASTER);
+
+        assertEquals(List.of(Role.PLAYER), user.getRoles());
+    }
+
+    @Test
+    @DisplayName("Should forbid removing base Role.PLAYER")
+    void shouldForbidRemovingPlayerRole() {
+        User user = User.createNew("player@dnd.com", "HeroPlayer", LocalDate.of(1990, 3, 15), "hash");
+        assertThrows(UserValidationException.class, () -> user.removeRole(Role.PLAYER));
+    }
+
+    @Test
+    @DisplayName("Should successfully set valid Data URL avatar and reject SVG or script injection")
+    void shouldHandleAvatarUrlValidation() {
+        LocalDate birthdate = LocalDate.of(1995, 5, 20);
+        User user = User.createNew("avatar@dnd.com", "AvatarUser", birthdate, "hash123");
+
+        assertNull(user.getAvatarUrl());
+
+        String validAvatar = "data:image/webp;base64,UklGRkAAAABXRUJQVlA4...";
+        user.updateAvatarUrl(validAvatar);
+        assertEquals(validAvatar, user.getAvatarUrl());
+
+        // Reject SVG
+        assertThrows(UserValidationException.class, () ->
+                user.updateAvatarUrl("data:image/svg+xml;base64,PHN2Zz48L3N2Zz4="));
+
+        // Reject JavaScript injection
+        assertThrows(UserValidationException.class, () ->
+                user.updateAvatarUrl("javascript:alert(1)"));
+    }
 }

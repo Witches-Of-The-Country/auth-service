@@ -8,6 +8,7 @@ import com.dungeoneer.auth.application.port.in.LoginUserUseCase;
 import com.dungeoneer.auth.application.port.in.RegisterUserCommand;
 import com.dungeoneer.auth.application.port.in.RegisterUserUseCase;
 import com.dungeoneer.auth.application.port.in.SelfPromoteUseCase;
+import com.dungeoneer.auth.application.port.in.UpdateAvatarUseCase;
 import com.dungeoneer.auth.application.port.in.UpdateUserRolesUseCase;
 import com.dungeoneer.auth.application.port.out.PasswordEncoderPort;
 import com.dungeoneer.auth.application.port.out.TokenProviderPort;
@@ -24,7 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetProfileUseCase, UpdateUserRolesUseCase, SelfPromoteUseCase {
+public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetProfileUseCase, UpdateUserRolesUseCase, SelfPromoteUseCase, UpdateAvatarUseCase {
 
     private final UserRepositoryPort userRepositoryPort;
     private final PasswordEncoderPort passwordEncoderPort;
@@ -109,5 +110,40 @@ public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetPr
     @Transactional
     public AuthResponseDto promoteToDungeonMaster(UUID userId) {
         return addRole(userId, Role.DUNGEON_MASTER);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponseDto toggleDungeonMasterRole(UUID userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
+        User user = userRepositoryPort.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+
+        if (user.getRoles().contains(Role.DUNGEON_MASTER)) {
+            user.removeRole(Role.DUNGEON_MASTER);
+        } else {
+            user.addRole(Role.DUNGEON_MASTER);
+        }
+
+        User updatedUser = userRepositoryPort.save(user);
+        String token = tokenProviderPort.generateToken(updatedUser);
+        return AuthResponseDto.bearer(token, tokenProviderPort.getExpirationSeconds(), UserProfileDto.fromDomain(updatedUser));
+    }
+
+    @Override
+    @Transactional
+    public UserProfileDto updateAvatar(UUID userId, String avatarUrl) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+        User user = userRepositoryPort.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+
+        user.updateAvatarUrl(avatarUrl);
+        User updated = userRepositoryPort.save(user);
+        return UserProfileDto.fromDomain(updated);
     }
 }

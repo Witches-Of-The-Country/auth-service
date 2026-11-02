@@ -6,4 +6,5 @@ import java.util.UUID;
 
 public interface SelfPromoteUseCase {
     AuthResponseDto promoteToDungeonMaster(UUID userId);
+    AuthResponseDto toggleDungeonMasterRole(UUID userId);
 }

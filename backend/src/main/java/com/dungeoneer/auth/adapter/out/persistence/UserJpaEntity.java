@@ -46,6 +46,9 @@ public class UserJpaEntity implements Persistable<UUID> {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private List<String> roles;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;

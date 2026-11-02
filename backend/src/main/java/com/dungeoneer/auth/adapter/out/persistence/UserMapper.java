@@ -18,6 +18,7 @@ public final class UserMapper {
         entity.setBirthdate(domain.getBirthdate());
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setRoles(domain.getRoles().stream().map(Enum::name).collect(Collectors.toList()));
+        entity.setAvatarUrl(domain.getAvatarUrl());
         return entity;
     }
 
@@ -27,6 +28,7 @@ public final class UserMapper {
         entity.setBirthdate(domain.getBirthdate());
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setRoles(domain.getRoles().stream().map(Enum::name).collect(Collectors.toList()));
+        entity.setAvatarUrl(domain.getAvatarUrl());
     }
 
     public static User toDomain(UserJpaEntity entity) {
@@ -40,7 +42,8 @@ public final class UserMapper {
                 entity.getNickname(),
                 entity.getBirthdate(),
                 entity.getPasswordHash(),
-                roles
+                roles,
+                entity.getAvatarUrl()
         );
     }
 }

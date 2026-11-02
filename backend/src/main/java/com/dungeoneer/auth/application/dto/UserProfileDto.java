@@ -12,15 +12,21 @@ public record UserProfileDto(
         String email,
         String nickname,
         LocalDate birthdate,
-        List<Role> roles
+        List<Role> roles,
+        String avatarUrl
 ) {
+    public UserProfileDto(UUID id, String email, String nickname, LocalDate birthdate, List<Role> roles) {
+        this(id, email, nickname, birthdate, roles, null);
+    }
+
     public static UserProfileDto fromDomain(User user) {
         return new UserProfileDto(
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
                 user.getBirthdate(),
-                user.getRoles()
+                user.getRoles(),
+                user.getAvatarUrl()
         );
     }
 }

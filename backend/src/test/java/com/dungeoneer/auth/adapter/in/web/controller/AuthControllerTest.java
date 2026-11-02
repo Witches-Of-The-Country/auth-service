@@ -274,4 +274,22 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/me/roles/promote-dm"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @DisplayName("POST /api/auth/me/roles/toggle-dm with valid token returns 200 and updated JWT")
+    void shouldToggleDmRoleSuccessfully() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UserProfileDto profile = new UserProfileDto(userId, "aragorn@gondor.com", "Strider", LocalDate.of(1990, 1, 1), List.of(Role.PLAYER));
+        AuthResponseDto authResponse = AuthResponseDto.bearer("demoted.jwt.token", 86400L, profile);
+
+        when(tokenProviderPort.validateTokenAndGetUserId("valid.bearer.token")).thenReturn(Optional.of(userId));
+        when(selfPromoteUseCase.toggleDungeonMasterRole(userId)).thenReturn(authResponse);
+
+        mockMvc.perform(post("/api/auth/me/roles/toggle-dm")
+                        .header("Authorization", "Bearer valid.bearer.token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("demoted.jwt.token"))
+                .andExpect(jsonPath("$.user.roles.length()").value(1))
+                .andExpect(jsonPath("$.user.roles[0]").value("PLAYER"));
+    }
 }

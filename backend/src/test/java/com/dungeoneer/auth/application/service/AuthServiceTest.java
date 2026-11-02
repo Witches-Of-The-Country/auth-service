@@ -177,4 +177,21 @@ class AuthServiceTest {
         assertThrows(com.dungeoneer.auth.domain.exception.UserNotFoundException.class, () ->
                 authService.addRole(randomId, Role.DUNGEON_MASTER));
     }
+
+    @Test
+    @DisplayName("Should toggle DUNGEON_MASTER role on and off while keeping PLAYER role")
+    void shouldToggleDungeonMasterRoleOnAndOff() {
+        when(userRepositoryPort.findById(sampleUser.getId())).thenReturn(Optional.of(sampleUser));
+        when(userRepositoryPort.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(tokenProviderPort.generateToken(any(User.class))).thenReturn("toggled.jwt.token");
+        when(tokenProviderPort.getExpirationSeconds()).thenReturn(86400L);
+
+        AuthResponseDto promoted = authService.toggleDungeonMasterRole(sampleUser.getId());
+        assertTrue(promoted.user().roles().contains(Role.DUNGEON_MASTER));
+        assertTrue(promoted.user().roles().contains(Role.PLAYER));
+
+        AuthResponseDto demoted = authService.toggleDungeonMasterRole(sampleUser.getId());
+        assertFalse(demoted.user().roles().contains(Role.DUNGEON_MASTER));
+        assertEquals(List.of(Role.PLAYER), demoted.user().roles());
+    }
 }
