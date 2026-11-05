@@ -17,6 +17,7 @@ import com.dungeoneer.auth.application.port.out.UserRepositoryPort;
 import com.dungeoneer.auth.domain.exception.DuplicateUserException;
 import com.dungeoneer.auth.domain.exception.InvalidCredentialsException;
 import com.dungeoneer.auth.domain.exception.UserNotFoundException;
+import com.dungeoneer.auth.domain.exception.UserValidationException;
 import com.dungeoneer.auth.domain.model.Role;
 import com.dungeoneer.auth.domain.model.User;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,10 @@ public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetPr
         String rawPassword = passwordCipherPort != null
                 ? passwordCipherPort.decryptPassword(command.rawPassword())
                 : command.rawPassword();
+
+        if (rawPassword == null || rawPassword.length() < 8 || rawPassword.length() > 100) {
+            throw new UserValidationException("Password must be between 8 and 100 characters long");
+        }
 
         String hashedPassword = passwordEncoderPort.encode(rawPassword);
         User newUser = User.createNew(normalizedEmail, normalizedNickname, command.birthdate(), hashedPassword, command.roles());

@@ -116,6 +116,34 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/auth/register with RSA-2048 encrypted password (>340 chars) passes @Size validation and returns 201 Created")
+    void shouldAcceptRsaEncryptedPasswordOnRegister() throws Exception {
+        String rsaPayload = "rsa:" + "A".repeat(344);
+        String jsonPayload = String.format("""
+                {
+                    "email": "aragorn@gondor.com",
+                    "nickname": "Strider",
+                    "birthdate": "1987-03-01",
+                    "password": "%s"
+                }
+                """, rsaPayload);
+
+        AuthResponseDto responseDto = AuthResponseDto.bearer(
+                "fake.jwt.token",
+                86400L,
+                new UserProfileDto(UUID.randomUUID(), "aragorn@gondor.com", "Strider", LocalDate.of(1987, 3, 1), List.of(Role.PLAYER))
+        );
+
+        when(registerUserUseCase.register(any(RegisterUserCommand.class))).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accessToken").value("fake.jwt.token"));
+    }
+
+    @Test
     @DisplayName("POST /api/auth/register with duplicate email returns 409 Conflict ProblemDetail")
     void shouldReturn409OnDuplicateEmail() throws Exception {
         String jsonPayload = """
