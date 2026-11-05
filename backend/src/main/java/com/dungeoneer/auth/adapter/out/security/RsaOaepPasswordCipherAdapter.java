@@ -4,6 +4,7 @@ import com.dungeoneer.auth.application.port.out.PasswordCipherPort;
 import com.dungeoneer.auth.domain.exception.InvalidCredentialsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +33,7 @@ public class RsaOaepPasswordCipherAdapter implements PasswordCipherPort {
     private final PrivateKey privateKey;
     private final String publicKeyBase64;
 
+    @Autowired
     public RsaOaepPasswordCipherAdapter(
             @Value("${auth.rsa.public-key:}") String configuredPublicKey,
             @Value("${auth.rsa.private-key:}") String configuredPrivateKey

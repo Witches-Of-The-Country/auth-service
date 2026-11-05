@@ -18,6 +18,7 @@ import com.dungeoneer.auth.application.port.in.UpdateUserRolesUseCase;
 import com.dungeoneer.auth.application.port.out.PasswordCipherPort;
 import com.dungeoneer.auth.application.port.out.TokenProviderPort;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -63,6 +64,7 @@ public class AuthController {
         this(registerUserUseCase, loginUserUseCase, getProfileUseCase, updateUserRolesUseCase, selfPromoteUseCase, updateAvatarUseCase, tokenProviderPort, passwordCipherPort, false);
     }
 
+    @Autowired
     public AuthController(
             RegisterUserUseCase registerUserUseCase,
             LoginUserUseCase loginUserUseCase,

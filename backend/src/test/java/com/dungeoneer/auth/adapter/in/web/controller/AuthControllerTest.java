@@ -336,4 +336,28 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.user.roles.length()").value(1))
                 .andExpect(jsonPath("$.user.roles[0]").value("PLAYER"));
     }
+
+    @Test
+    @DisplayName("Spring DI Annotation: AuthController and RsaOaepPasswordCipherAdapter have @Autowired on primary constructors")
+    void shouldInjectBeansWithSpringAnnotationConfigApplicationContext() {
+        try (var context = new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
+            context.registerBean(RegisterUserUseCase.class, () -> registerUserUseCase);
+            context.registerBean(LoginUserUseCase.class, () -> loginUserUseCase);
+            context.registerBean(GetProfileUseCase.class, () -> getProfileUseCase);
+            context.registerBean(com.dungeoneer.auth.application.port.in.UpdateUserRolesUseCase.class, () -> updateUserRolesUseCase);
+            context.registerBean(com.dungeoneer.auth.application.port.in.SelfPromoteUseCase.class, () -> selfPromoteUseCase);
+            context.registerBean(com.dungeoneer.auth.application.port.in.UpdateAvatarUseCase.class, () -> updateAvatarUseCase);
+            context.registerBean(com.dungeoneer.auth.application.port.out.TokenProviderPort.class, () -> tokenProviderPort);
+            context.register(com.dungeoneer.auth.adapter.out.security.RsaOaepPasswordCipherAdapter.class);
+            context.register(AuthController.class);
+            context.refresh();
+
+            AuthController controllerBean = context.getBean(AuthController.class);
+            var cipherBean = context.getBean(com.dungeoneer.auth.adapter.out.security.RsaOaepPasswordCipherAdapter.class);
+
+            org.junit.jupiter.api.Assertions.assertNotNull(controllerBean);
+            org.junit.jupiter.api.Assertions.assertNotNull(cipherBean);
+            org.junit.jupiter.api.Assertions.assertFalse(cipherBean.getPublicKeyBase64().isBlank());
+        }
+    }
 }
