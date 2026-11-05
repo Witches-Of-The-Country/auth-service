@@ -39,6 +39,9 @@ class AuthServiceTest {
     @Mock
     private TokenProviderPort tokenProviderPort;
 
+    @Mock
+    private com.dungeoneer.auth.application.port.out.PasswordCipherPort passwordCipherPort;
+
     @InjectMocks
     private AuthService authService;
 
@@ -46,6 +49,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(passwordCipherPort.decryptPassword(any())).thenAnswer(inv -> inv.getArgument(0));
         sampleUser = new User(
                 UUID.randomUUID(),
                 "thorin@erebor.com",
@@ -193,5 +197,52 @@ class AuthServiceTest {
         AuthResponseDto demoted = authService.toggleDungeonMasterRole(sampleUser.getId());
         assertFalse(demoted.user().roles().contains(Role.DUNGEON_MASTER));
         assertEquals(List.of(Role.PLAYER), demoted.user().roles());
+    }
+
+    @Test
+    @DisplayName("Should decrypt encrypted RSA password payload before encoding on register")
+    void shouldDecryptRsaPasswordOnRegister() {
+        RegisterUserCommand command = new RegisterUserCommand(
+                "gandalf@istari.com",
+                "Mithrandir",
+                LocalDate.of(1950, 1, 1),
+                "rsa:encrypted-secret-payload",
+                List.of(Role.PLAYER)
+        );
+
+        when(userRepositoryPort.existsByEmail("gandalf@istari.com")).thenReturn(false);
+        when(userRepositoryPort.existsByNickname("Mithrandir")).thenReturn(false);
+        when(passwordCipherPort.decryptPassword("rsa:encrypted-secret-payload")).thenReturn("decryptedPlainPassword");
+        when(passwordEncoderPort.encode("decryptedPlainPassword")).thenReturn("hashedPass");
+        when(userRepositoryPort.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tokenProviderPort.generateToken(any(User.class))).thenReturn("jwt.token");
+        when(tokenProviderPort.getExpirationSeconds()).thenReturn(86400L);
+
+        AuthResponseDto response = authService.register(command);
+
+        assertNotNull(response);
+        verify(passwordCipherPort).decryptPassword("rsa:encrypted-secret-payload");
+        verify(passwordEncoderPort).encode("decryptedPlainPassword");
+    }
+
+    @Test
+    @DisplayName("Should decrypt encrypted RSA password payload before matching on login")
+    void shouldDecryptRsaPasswordOnLogin() {
+        LoginUserCommand command = new LoginUserCommand(
+                "thorin@erebor.com",
+                "rsa:encrypted-login-secret"
+        );
+
+        when(userRepositoryPort.findByEmail("thorin@erebor.com")).thenReturn(Optional.of(sampleUser));
+        when(passwordCipherPort.decryptPassword("rsa:encrypted-login-secret")).thenReturn("decryptedPlainPassword");
+        when(passwordEncoderPort.matches("decryptedPlainPassword", sampleUser.getPasswordHash())).thenReturn(true);
+        when(tokenProviderPort.generateToken(sampleUser)).thenReturn("jwt.token");
+        when(tokenProviderPort.getExpirationSeconds()).thenReturn(86400L);
+
+        AuthResponseDto response = authService.login(command);
+
+        assertNotNull(response);
+        verify(passwordCipherPort).decryptPassword("rsa:encrypted-login-secret");
+        verify(passwordEncoderPort).matches("decryptedPlainPassword", sampleUser.getPasswordHash());
     }
 }

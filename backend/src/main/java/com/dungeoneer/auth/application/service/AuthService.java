@@ -10,6 +10,7 @@ import com.dungeoneer.auth.application.port.in.RegisterUserUseCase;
 import com.dungeoneer.auth.application.port.in.SelfPromoteUseCase;
 import com.dungeoneer.auth.application.port.in.UpdateAvatarUseCase;
 import com.dungeoneer.auth.application.port.in.UpdateUserRolesUseCase;
+import com.dungeoneer.auth.application.port.out.PasswordCipherPort;
 import com.dungeoneer.auth.application.port.out.PasswordEncoderPort;
 import com.dungeoneer.auth.application.port.out.TokenProviderPort;
 import com.dungeoneer.auth.application.port.out.UserRepositoryPort;
@@ -30,15 +31,18 @@ public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetPr
     private final UserRepositoryPort userRepositoryPort;
     private final PasswordEncoderPort passwordEncoderPort;
     private final TokenProviderPort tokenProviderPort;
+    private final PasswordCipherPort passwordCipherPort;
 
     public AuthService(
             UserRepositoryPort userRepositoryPort,
             PasswordEncoderPort passwordEncoderPort,
-            TokenProviderPort tokenProviderPort
+            TokenProviderPort tokenProviderPort,
+            PasswordCipherPort passwordCipherPort
     ) {
         this.userRepositoryPort = userRepositoryPort;
         this.passwordEncoderPort = passwordEncoderPort;
         this.tokenProviderPort = tokenProviderPort;
+        this.passwordCipherPort = passwordCipherPort;
     }
 
     @Override
@@ -54,7 +58,11 @@ public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetPr
             throw new DuplicateUserException("Nickname is already taken: " + normalizedNickname);
         }
 
-        String hashedPassword = passwordEncoderPort.encode(command.rawPassword());
+        String rawPassword = passwordCipherPort != null
+                ? passwordCipherPort.decryptPassword(command.rawPassword())
+                : command.rawPassword();
+
+        String hashedPassword = passwordEncoderPort.encode(rawPassword);
         User newUser = User.createNew(normalizedEmail, normalizedNickname, command.birthdate(), hashedPassword, command.roles());
         User savedUser = userRepositoryPort.save(newUser);
 
@@ -70,7 +78,11 @@ public class AuthService implements RegisterUserUseCase, LoginUserUseCase, GetPr
         User user = userRepositoryPort.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
-        if (!passwordEncoderPort.matches(command.rawPassword(), user.getPasswordHash())) {
+        String rawPassword = passwordCipherPort != null
+                ? passwordCipherPort.decryptPassword(command.rawPassword())
+                : command.rawPassword();
+
+        if (!passwordEncoderPort.matches(rawPassword, user.getPasswordHash())) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 

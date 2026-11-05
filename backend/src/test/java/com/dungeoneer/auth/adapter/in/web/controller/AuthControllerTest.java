@@ -55,13 +55,29 @@ class AuthControllerTest {
     @Mock
     private com.dungeoneer.auth.application.port.out.TokenProviderPort tokenProviderPort;
 
-    @InjectMocks
+    @Mock
+    private com.dungeoneer.auth.application.port.in.UpdateAvatarUseCase updateAvatarUseCase;
+
+    @Mock
+    private com.dungeoneer.auth.application.port.out.PasswordCipherPort passwordCipherPort;
+
     private AuthController authController;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
+        authController = new AuthController(
+                registerUserUseCase,
+                loginUserUseCase,
+                getProfileUseCase,
+                updateUserRolesUseCase,
+                selfPromoteUseCase,
+                updateAvatarUseCase,
+                tokenProviderPort,
+                passwordCipherPort,
+                false
+        );
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -91,6 +107,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonPayload))
                 .andExpect(status().isCreated())
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("dungeoneer_auth_token=fake.jwt.token")))
                 .andExpect(jsonPath("$.accessToken").value("fake.jwt.token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.user.email").value("aragorn@gondor.com"))
@@ -224,7 +242,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/users/{userId}/roles with valid role returns 200 OK")
+    @DisplayName("POST /api/auth/users/{userId}/roles with matching caller returns 200 OK")
     void shouldAddRoleSuccessfully() throws Exception {
         UUID userId = UUID.randomUUID();
         UserProfileDto profile = new UserProfileDto(userId, "aragorn@gondor.com", "Strider", LocalDate.of(1990, 1, 1), List.of(Role.PLAYER, Role.DUNGEON_MASTER));
@@ -233,6 +251,7 @@ class AuthControllerTest {
         when(updateUserRolesUseCase.addRole(eq(userId), eq(Role.DUNGEON_MASTER))).thenReturn(authResponse);
 
         mockMvc.perform(post("/api/auth/users/" + userId + "/roles")
+                        .header("X-User-Id", userId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\": \"DUNGEON_MASTER\"}"))
                 .andExpect(status().isOk())
@@ -241,11 +260,36 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/auth/users/{userId}/roles without auth returns 401 Unauthorized (SEC-CRIT-01)")
+    void shouldReturn401WhenAddingRoleWithoutAuth() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/auth/users/" + userId + "/roles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\": \"DUNGEON_MASTER\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/users/{userId}/roles with mismatched caller returns 403 Forbidden (SEC-CRIT-01)")
+    void shouldReturn403WhenAddingRoleForOtherUser() throws Exception {
+        UUID targetUserId = UUID.randomUUID();
+        UUID attackerUserId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/auth/users/" + targetUserId + "/roles")
+                        .header("X-User-Id", attackerUserId.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\": \"DUNGEON_MASTER\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("POST /api/auth/users/{userId}/roles with missing role returns 422 Unprocessable Entity")
     void shouldFailValidationOnMissingRole() throws Exception {
         UUID userId = UUID.randomUUID();
 
         mockMvc.perform(post("/api/auth/users/" + userId + "/roles")
+                        .header("X-User-Id", userId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnprocessableEntity());

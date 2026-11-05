@@ -4,6 +4,8 @@ import com.dungeoneer.auth.domain.exception.DuplicateUserException;
 import com.dungeoneer.auth.domain.exception.InvalidCredentialsException;
 import com.dungeoneer.auth.domain.exception.UserNotFoundException;
 import com.dungeoneer.auth.domain.exception.UserValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
@@ -18,6 +20,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(UserNotFoundException.class)
     public ProblemDetail handleUserNotFoundException(UserNotFoundException ex) {
@@ -72,7 +76,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
+        log.error("Unhandled internal server error: ", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
         problem.setTitle("Internal Server Error");
         problem.setType(URI.create("https://dungeoneer.app/errors/internal-server-error"));
         problem.setProperty("timestamp", Instant.now());
